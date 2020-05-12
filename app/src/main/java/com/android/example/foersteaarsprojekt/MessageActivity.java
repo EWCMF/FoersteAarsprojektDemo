@@ -42,11 +42,8 @@ public class MessageActivity extends Activity {
     private Spinner spinner;
     private ArrayList<String> list;
     private ArrayList<Message> currentMessages;
-    private TextView textView;
-    private RecyclerView recyclerView;
     private EditText editText;
     private MessageAdapter messageAdapter;
-    private Query query;
     private String practitionerOrClient;
     private String opposite;
 
@@ -58,8 +55,8 @@ public class MessageActivity extends Activity {
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
         spinner = findViewById(R.id.spinner3);
-        textView = findViewById(R.id.textView3);
-        recyclerView = findViewById(R.id.messageRecycleView);
+        TextView textView = findViewById(R.id.textView3);
+        RecyclerView recyclerView = findViewById(R.id.messageRecycleView);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         editText = findViewById(R.id.messageEditText);
         messageAdapter = new MessageAdapter();
@@ -78,35 +75,11 @@ public class MessageActivity extends Activity {
         else {
             receiverType = "behandlere";
             textView.setText("Klient " + mAuth.getCurrentUser().getEmail());
-            query = db.collection("chat").whereEqualTo("klient", mAuth.getCurrentUser().getEmail());
             practitionerOrClient = "klient";
             opposite = "behandler";
         }
 
         currentMessages = new ArrayList<>();
-//        query = db.collection("chat").whereEqualTo(practitionerOrClient, mAuth.getCurrentUser().getEmail()).whereEqualTo(opposite, spinner.getSelectedItem());
-//        query.addSnapshotListener(new EventListener<QuerySnapshot>() {
-//            @Override
-//            public void onEvent(@Nullable QuerySnapshot queryDocumentSnapshots, @Nullable FirebaseFirestoreException e) {
-//                for (DocumentSnapshot documentSnapshot : queryDocumentSnapshots) {
-//                    documentSnapshot.getReference().collection("messages").orderBy("timestamp").addSnapshotListener(new EventListener<QuerySnapshot>() {
-//                        @Override
-//                        public void onEvent(@Nullable QuerySnapshot queryDocumentSnapshots, @Nullable FirebaseFirestoreException e) {
-//                            List<DocumentSnapshot> messages = queryDocumentSnapshots.getDocuments();
-//                            currentMessages.clear();
-//                            for (DocumentSnapshot snapshot : messages) {
-//                                String message = (String) snapshot.get("message");
-//                                String author = (String) snapshot.get("author");
-//                                Message messageObject = new Message(author, message);
-//                                currentMessages.add(messageObject);
-//                            }
-//                            messageAdapter.setMessages(currentMessages);
-//                        }
-//                    });
-//                }
-//
-//            }
-//        });
 
         list = new ArrayList<>();
         db.collection(receiverType).get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
@@ -128,6 +101,8 @@ public class MessageActivity extends Activity {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 String newRecipient = parent.getItemAtPosition(position).toString();
+                currentMessages.clear();
+                messageAdapter.setMessages(currentMessages);
                 updateRecipient(newRecipient);
             }
 
@@ -215,7 +190,7 @@ public class MessageActivity extends Activity {
         });
     }
 
-    private class MessageAdapter extends RecyclerView.Adapter<MessageViewHolder> {
+    private static class MessageAdapter extends RecyclerView.Adapter<MessageViewHolder> {
         private List<Message> messages = new ArrayList<>();
 
 
@@ -238,17 +213,17 @@ public class MessageActivity extends Activity {
             return messages.size();
         }
 
-        public void setMessages(List<Message> messages) {
+        void setMessages(List<Message> messages) {
             this.messages = messages;
             notifyDataSetChanged();
         }
     }
 
-    private class MessageViewHolder extends RecyclerView.ViewHolder {
+    private static class MessageViewHolder extends RecyclerView.ViewHolder {
         private TextView author;
         private TextView message;
 
-        public MessageViewHolder(@NonNull View itemView) {
+        MessageViewHolder(@NonNull View itemView) {
             super(itemView);
             author = itemView.findViewById(R.id.messageAuthor);
             message = itemView.findViewById(R.id.messageMessage);
