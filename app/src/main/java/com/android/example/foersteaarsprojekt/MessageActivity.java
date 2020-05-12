@@ -7,6 +7,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.Spinner;
@@ -20,6 +21,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
+import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
@@ -39,12 +41,14 @@ public class MessageActivity extends Activity {
     private FirebaseFirestore db;
     private Spinner spinner;
     private ArrayList<String> list;
+    private ArrayList<Message> currentMessages;
     private TextView textView;
     private RecyclerView recyclerView;
     private EditText editText;
     private MessageAdapter messageAdapter;
     private Query query;
     private String practitionerOrClient;
+    private String opposite;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -69,39 +73,40 @@ public class MessageActivity extends Activity {
             receiverType = "klienter";
             textView.setText("Behandler " + mAuth.getCurrentUser().getEmail());
             practitionerOrClient = "behandler";
+            opposite = "klient";
         }
         else {
             receiverType = "behandlere";
             textView.setText("Klient " + mAuth.getCurrentUser().getEmail());
             query = db.collection("chat").whereEqualTo("klient", mAuth.getCurrentUser().getEmail());
             practitionerOrClient = "klient";
+            opposite = "behandler";
         }
 
-        query = db.collection("chat").whereEqualTo(practitionerOrClient, mAuth.getCurrentUser().getEmail());
-
-        query.addSnapshotListener(new EventListener<QuerySnapshot>() {
-            @Override
-            public void onEvent(@Nullable QuerySnapshot queryDocumentSnapshots, @Nullable FirebaseFirestoreException e) {
-                final ArrayList<Message> forAdapter = new ArrayList<>();
-                for (DocumentSnapshot documentSnapshot : queryDocumentSnapshots) {
-                    documentSnapshot.getReference().collection("messages").get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
-                        @Override
-                        public void onComplete(@NonNull Task<QuerySnapshot> task) {
-                            if (task.isSuccessful()) {
-                                List<DocumentSnapshot> messages = task.getResult().getDocuments();
-                                for (int i = 0; i < messages.size(); i++) {
-                                    String message = (String) messages.get(i).get("message");
-                                    String author = (String) messages.get(i).get("author");
-                                    Message messageObject = new Message(author, message);
-                                    forAdapter.add(messageObject);
-                                }
-                            }
-                        }
-                    });
-                }
-                messageAdapter.setMessages(forAdapter);
-            }
-        });
+        currentMessages = new ArrayList<>();
+//        query = db.collection("chat").whereEqualTo(practitionerOrClient, mAuth.getCurrentUser().getEmail()).whereEqualTo(opposite, spinner.getSelectedItem());
+//        query.addSnapshotListener(new EventListener<QuerySnapshot>() {
+//            @Override
+//            public void onEvent(@Nullable QuerySnapshot queryDocumentSnapshots, @Nullable FirebaseFirestoreException e) {
+//                for (DocumentSnapshot documentSnapshot : queryDocumentSnapshots) {
+//                    documentSnapshot.getReference().collection("messages").orderBy("timestamp").addSnapshotListener(new EventListener<QuerySnapshot>() {
+//                        @Override
+//                        public void onEvent(@Nullable QuerySnapshot queryDocumentSnapshots, @Nullable FirebaseFirestoreException e) {
+//                            List<DocumentSnapshot> messages = queryDocumentSnapshots.getDocuments();
+//                            currentMessages.clear();
+//                            for (DocumentSnapshot snapshot : messages) {
+//                                String message = (String) snapshot.get("message");
+//                                String author = (String) snapshot.get("author");
+//                                Message messageObject = new Message(author, message);
+//                                currentMessages.add(messageObject);
+//                            }
+//                            messageAdapter.setMessages(currentMessages);
+//                        }
+//                    });
+//                }
+//
+//            }
+//        });
 
         list = new ArrayList<>();
         db.collection(receiverType).get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
@@ -109,45 +114,54 @@ public class MessageActivity extends Activity {
             public void onComplete(@NonNull Task<QuerySnapshot> task) {
                 List<DocumentSnapshot> receivers = task.getResult().getDocuments();
                 for (int i = 0; i < receivers.size(); i++) {
-                    String add = receivers.get(i).getId();
-                    list.add(add);
+                    String string = receivers.get(i).getId();
+                    list.add(string);
                 }
+                ArrayAdapter<String> arrayAdapter = new ArrayAdapter<>(getApplicationContext(), R.layout.support_simple_spinner_dropdown_item, list);
+                spinner.setAdapter(arrayAdapter);
             }
         });
 
-        ArrayAdapter<String> arrayAdapter = new ArrayAdapter<>(this, R.layout.support_simple_spinner_dropdown_item, list);
-        spinner.setAdapter(arrayAdapter);
+        recyclerView.setAdapter(messageAdapter);
 
+        spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                String newRecipient = parent.getItemAtPosition(position).toString();
+                updateRecipient(newRecipient);
+            }
 
-        // This works
-//        db.collection("chat").whereEqualTo("recipient", mAuth.getCurrentUser().getEmail()).get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
-//            @Override
-//            public void onComplete(@NonNull Task<QuerySnapshot> task) {
-//                if (task.isSuccessful()) {
-//                    final ArrayList<Message> recycle = new ArrayList<>();
-//                    List<DocumentSnapshot> documents = task.getResult().getDocuments();
-//                    for (int i = 0; i < documents.size(); i++) {
-//                        documents.get(i).getReference().collection("messages").get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
-//                            @Override
-//                            public void onComplete(@NonNull Task<QuerySnapshot> task) {
-//                                List<DocumentSnapshot> messages = task.getResult().getDocuments();
-//                                for (int j = 0; j < messages.size(); j++) {
-//                                    String message = (String) messages.get(j).get("message");
-//                                    String author = (String) messages.get(j).get("author");
-//                                    Message object = new Message();
-//                                    object.setSender(author);
-//                                    object.setMessage(message);
-//                                    recycle.add(object);
-//                                }
-//                            }
-//                        });
-//                    }
-//                    messageAdapter.setMessages(recycle);
-//                }
-//            }
-//        });
-//
-       recyclerView.setAdapter(messageAdapter);
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+
+            }
+        });
+
+    }
+
+    public void updateRecipient(String newRecipient) {
+        Query query = db.collection("chat").whereEqualTo(practitionerOrClient, mAuth.getCurrentUser().getEmail()).whereEqualTo(opposite, newRecipient);
+        query.addSnapshotListener(new EventListener<QuerySnapshot>() {
+            @Override
+            public void onEvent(@Nullable QuerySnapshot queryDocumentSnapshots, @Nullable FirebaseFirestoreException e) {
+                if (!queryDocumentSnapshots.isEmpty()) {
+                    queryDocumentSnapshots.getDocuments().get(0).getReference().collection("messages").orderBy("timestamp").addSnapshotListener(new EventListener<QuerySnapshot>() {
+                        @Override
+                        public void onEvent(@Nullable QuerySnapshot queryDocumentSnapshots, @Nullable FirebaseFirestoreException e) {
+                            List<DocumentSnapshot> messages = queryDocumentSnapshots.getDocuments();
+                            currentMessages.clear();
+                            for (DocumentSnapshot snapshot : messages) {
+                                String message = (String) snapshot.get("message");
+                                String author = (String) snapshot.get("author");
+                                Message messageObject = new Message(author, message);
+                                currentMessages.add(messageObject);
+                            }
+                            messageAdapter.setMessages(currentMessages);
+                        }
+                    });
+                }
+            }
+        });
     }
 
     public void send(View view) {
@@ -158,21 +172,44 @@ public class MessageActivity extends Activity {
         else {
             where = "behandler";
         }
-        Query query = db.collection("chat").whereEqualTo(where, "test@hotmail.com").whereEqualTo(practitionerOrClient, mAuth.getCurrentUser().getEmail());
+        Query query = db.collection("chat").whereEqualTo(where, spinner.getSelectedItem().toString()).whereEqualTo(practitionerOrClient, mAuth.getCurrentUser().getEmail());
         query.get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
             @Override
             public void onComplete(@NonNull Task<QuerySnapshot> task) {
                 if (task.isSuccessful()) {
-                    Map<String, Object> message = new HashMap<>();
-                    message.put("message", editText.getText().toString());
-                    message.put("author", mAuth.getCurrentUser().getEmail());
-                    message.put("recipient", "test@hotmail.com");
-                    task.getResult().getDocuments().get(0).getReference().collection("messages").add(message).addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
-                        @Override
-                        public void onSuccess(DocumentReference documentReference) {
-                            Log.d("test4", "Success");
+                    if (task.getResult().isEmpty()) {
+                        Map<String, Object> newChat = new HashMap<>();
+                        if (practitionerOrClient.equals("behandler")) {
+                            newChat.put("behandler", mAuth.getCurrentUser().getEmail());
+                            newChat.put("klient", spinner.getSelectedItem().toString());
                         }
-                    });
+                        else {
+                            newChat.put("behandler", spinner.getSelectedItem().toString());
+                            newChat.put("klient", mAuth.getCurrentUser().getEmail());
+                        }
+                        DocumentReference newDoc = db.collection("chat").document();
+                        Map<String, Object> newMessage = new HashMap<>();
+                        newMessage.put("message", editText.getText().toString());
+                        newMessage.put("author", mAuth.getCurrentUser().getEmail());
+                        newMessage.put("recipient", spinner.getSelectedItem().toString());
+                        newMessage.put("timestamp", Timestamp.now());
+                        newDoc.collection("messages").add(newMessage);
+                        newDoc.set(newChat);
+
+                    }
+                    else {
+                        Map<String, Object> message = new HashMap<>();
+                        message.put("message", editText.getText().toString());
+                        message.put("author", mAuth.getCurrentUser().getEmail());
+                        message.put("recipient", spinner.getSelectedItem().toString());
+                        message.put("timestamp", Timestamp.now());
+                        task.getResult().getDocuments().get(0).getReference().collection("messages").add(message).addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
+                            @Override
+                            public void onSuccess(DocumentReference documentReference) {
+                                Log.d("test4", "Success");
+                            }
+                        });
+                    }
                 }
             }
         });
