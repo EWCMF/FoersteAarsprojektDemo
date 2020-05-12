@@ -7,6 +7,11 @@ public class Message {
     public Message() {
     }
 
+    public Message(String sender, String message) {
+        this.sender = sender;
+        this.message = message;
+    }
+
     public void setSender(String sender) {
         this.sender = sender;
     }

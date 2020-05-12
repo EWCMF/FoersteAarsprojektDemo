@@ -191,6 +191,14 @@ public class MainActivity extends AppCompatActivity {
         startActivity(i);
     }
 
+    public void signInBehandler(View view) {
+        signIn("tghpublic@hotmail.com", "test123");
+    }
+
+    public void signInKlient(View view) {
+        signIn("test@hotmail.com", "test123");
+    }
+
     @Override
     public void onStart() {
         super.onStart();

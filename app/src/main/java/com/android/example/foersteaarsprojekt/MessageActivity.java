@@ -3,6 +3,7 @@ package com.android.example.foersteaarsprojekt;
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -17,8 +18,10 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.EventListener;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -27,7 +30,9 @@ import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QuerySnapshot;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class MessageActivity extends Activity {
     private FirebaseAuth mAuth;
@@ -37,6 +42,9 @@ public class MessageActivity extends Activity {
     private TextView textView;
     private RecyclerView recyclerView;
     private EditText editText;
+    private MessageAdapter messageAdapter;
+    private Query query;
+    private String practitionerOrClient;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -50,6 +58,8 @@ public class MessageActivity extends Activity {
         recyclerView = findViewById(R.id.messageRecycleView);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         editText = findViewById(R.id.messageEditText);
+        messageAdapter = new MessageAdapter();
+
 
         Intent intent = getIntent();
         String type = intent.getStringExtra("type");
@@ -58,11 +68,40 @@ public class MessageActivity extends Activity {
         if (type.equals("behandlere")) {
             receiverType = "klienter";
             textView.setText("Behandler " + mAuth.getCurrentUser().getEmail());
+            practitionerOrClient = "behandler";
         }
         else {
             receiverType = "behandlere";
             textView.setText("Klient " + mAuth.getCurrentUser().getEmail());
+            query = db.collection("chat").whereEqualTo("klient", mAuth.getCurrentUser().getEmail());
+            practitionerOrClient = "klient";
         }
+
+        query = db.collection("chat").whereEqualTo(practitionerOrClient, mAuth.getCurrentUser().getEmail());
+
+        query.addSnapshotListener(new EventListener<QuerySnapshot>() {
+            @Override
+            public void onEvent(@Nullable QuerySnapshot queryDocumentSnapshots, @Nullable FirebaseFirestoreException e) {
+                final ArrayList<Message> forAdapter = new ArrayList<>();
+                for (DocumentSnapshot documentSnapshot : queryDocumentSnapshots) {
+                    documentSnapshot.getReference().collection("messages").get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+                        @Override
+                        public void onComplete(@NonNull Task<QuerySnapshot> task) {
+                            if (task.isSuccessful()) {
+                                List<DocumentSnapshot> messages = task.getResult().getDocuments();
+                                for (int i = 0; i < messages.size(); i++) {
+                                    String message = (String) messages.get(i).get("message");
+                                    String author = (String) messages.get(i).get("author");
+                                    Message messageObject = new Message(author, message);
+                                    forAdapter.add(messageObject);
+                                }
+                            }
+                        }
+                    });
+                }
+                messageAdapter.setMessages(forAdapter);
+            }
+        });
 
         list = new ArrayList<>();
         db.collection(receiverType).get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
@@ -79,32 +118,64 @@ public class MessageActivity extends Activity {
         ArrayAdapter<String> arrayAdapter = new ArrayAdapter<>(this, R.layout.support_simple_spinner_dropdown_item, list);
         spinner.setAdapter(arrayAdapter);
 
-        final MessageAdapter messageAdapter = new MessageAdapter();
 
-        Query query = db.collectionGroup("messages").whereEqualTo("receiver", mAuth.getCurrentUser().getEmail());
-        query.addSnapshotListener(new EventListener<QuerySnapshot>() {
-            @Override
-            public void onEvent(@Nullable QuerySnapshot queryDocumentSnapshots, @Nullable FirebaseFirestoreException e) {
-                List<DocumentSnapshot> snapshotsDocuments = queryDocumentSnapshots.getDocuments();
-                ArrayList<Message> messages = new ArrayList<>();
-                for (DocumentSnapshot snapshot : snapshotsDocuments) {
-                    if (snapshot.exists()) {
-                        Message message = snapshot.toObject(Message.class);
-                        message.setMessage((String) snapshot.get("message"));
-                        message.setSender((String) snapshot.get("author"));
-                        messages.add(message);
-                    }
-                }
-                messageAdapter.setMessages(messages);
-            }
-        });
-
-        recyclerView.setAdapter(messageAdapter);
-
+        // This works
+//        db.collection("chat").whereEqualTo("recipient", mAuth.getCurrentUser().getEmail()).get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+//            @Override
+//            public void onComplete(@NonNull Task<QuerySnapshot> task) {
+//                if (task.isSuccessful()) {
+//                    final ArrayList<Message> recycle = new ArrayList<>();
+//                    List<DocumentSnapshot> documents = task.getResult().getDocuments();
+//                    for (int i = 0; i < documents.size(); i++) {
+//                        documents.get(i).getReference().collection("messages").get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+//                            @Override
+//                            public void onComplete(@NonNull Task<QuerySnapshot> task) {
+//                                List<DocumentSnapshot> messages = task.getResult().getDocuments();
+//                                for (int j = 0; j < messages.size(); j++) {
+//                                    String message = (String) messages.get(j).get("message");
+//                                    String author = (String) messages.get(j).get("author");
+//                                    Message object = new Message();
+//                                    object.setSender(author);
+//                                    object.setMessage(message);
+//                                    recycle.add(object);
+//                                }
+//                            }
+//                        });
+//                    }
+//                    messageAdapter.setMessages(recycle);
+//                }
+//            }
+//        });
+//
+       recyclerView.setAdapter(messageAdapter);
     }
 
     public void send(View view) {
-
+        String where = "";
+        if (practitionerOrClient.equals("behandler")) {
+            where = "klient";
+        }
+        else {
+            where = "behandler";
+        }
+        Query query = db.collection("chat").whereEqualTo(where, "test@hotmail.com").whereEqualTo(practitionerOrClient, mAuth.getCurrentUser().getEmail());
+        query.get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+            @Override
+            public void onComplete(@NonNull Task<QuerySnapshot> task) {
+                if (task.isSuccessful()) {
+                    Map<String, Object> message = new HashMap<>();
+                    message.put("message", editText.getText().toString());
+                    message.put("author", mAuth.getCurrentUser().getEmail());
+                    message.put("recipient", "test@hotmail.com");
+                    task.getResult().getDocuments().get(0).getReference().collection("messages").add(message).addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
+                        @Override
+                        public void onSuccess(DocumentReference documentReference) {
+                            Log.d("test4", "Success");
+                        }
+                    });
+                }
+            }
+        });
     }
 
     private class MessageAdapter extends RecyclerView.Adapter<MessageViewHolder> {
