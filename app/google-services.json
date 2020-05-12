@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "810032869379",
+    "firebase_url": "https://foersteaarsprojekt.firebaseio.com",
+    "project_id": "foersteaarsprojekt",
+    "storage_bucket": "foersteaarsprojekt.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:810032869379:android:c269d74932c0d87683de36",
+        "android_client_info": {
+          "package_name": "com.android.example.foersteaarsprojekt"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "810032869379-3q42mn0e8n1iu8nd9j2cj0qnem9hg945.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDa8J1lziGLC2CnPHbeMw2rTsGnJhxQbZ4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "810032869379-3q42mn0e8n1iu8nd9j2cj0qnem9hg945.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">FoersteAarsprojekt</string>
+
+    <string-array name="spinner">
+        <item>Registrer</item>
+        <item>Log ind</item>
+    </string-array>
+
+    <string-array name="spinner2">
+        <item>Behandler</item>
+        <item>Klient</item>
+    </string-array>
+</resources>
