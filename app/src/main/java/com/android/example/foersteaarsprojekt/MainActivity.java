@@ -54,23 +54,8 @@ public class MainActivity extends AppCompatActivity {
         ArrayAdapter<CharSequence> arrayAdapter2 = ArrayAdapter.createFromResource(this, R.array.spinner2, R.layout.support_simple_spinner_dropdown_item);
         rolleSpinner.setAdapter(arrayAdapter2);
 
-
-        // Write a message to the database
         db = FirebaseFirestore.getInstance();
         mAuth = FirebaseAuth.getInstance();
-
-        db.collectionGroup("messages").get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
-            @Override
-            public void onComplete(@NonNull Task<QuerySnapshot> task) {
-                if (task.isSuccessful()) {
-                    for (QueryDocumentSnapshot document : task.getResult()) {
-                        Log.d("test", document.get("message").toString());
-                    }
-                } else {
-                    Log.d("test2", "Fail");
-                }
-            }
-        });
     }
 
     public void buttonPress(View view) {
@@ -173,16 +158,6 @@ public class MainActivity extends AppCompatActivity {
                         }
                     }
                 });
-    }
-
-    public void printUserData(View view) {
-        FirebaseUser user = mAuth.getCurrentUser();
-        if (user != null) {
-            Log.v("user", "test" + user.getDisplayName());
-            Log.v("user", user.getEmail());
-            Log.v("user", user.getProviderId());
-            Log.v("user", user.getUid());
-        }
     }
 
     public void moveToMessageActivity(String type) {

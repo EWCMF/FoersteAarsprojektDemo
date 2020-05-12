@@ -40,6 +40,7 @@ public class MessageActivity extends Activity {
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
     private Spinner spinner;
+    private RecyclerView recyclerView;
     private ArrayList<String> list;
     private ArrayList<Message> currentMessages;
     private EditText editText;
@@ -56,7 +57,7 @@ public class MessageActivity extends Activity {
         db = FirebaseFirestore.getInstance();
         spinner = findViewById(R.id.spinner3);
         TextView textView = findViewById(R.id.textView3);
-        RecyclerView recyclerView = findViewById(R.id.messageRecycleView);
+        recyclerView = findViewById(R.id.messageRecycleView);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         editText = findViewById(R.id.messageEditText);
         messageAdapter = new MessageAdapter();
@@ -132,6 +133,7 @@ public class MessageActivity extends Activity {
                                 currentMessages.add(messageObject);
                             }
                             messageAdapter.setMessages(currentMessages);
+                            scrollToBottom();
                         }
                     });
                 }
@@ -188,6 +190,10 @@ public class MessageActivity extends Activity {
                 }
             }
         });
+    }
+
+    public void scrollToBottom() {
+        recyclerView.smoothScrollToPosition(currentMessages.size()-1);
     }
 
     private static class MessageAdapter extends RecyclerView.Adapter<MessageViewHolder> {
